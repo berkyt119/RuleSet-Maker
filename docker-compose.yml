@@ -1,0 +1,21 @@
+services:
+  app:
+    build: .
+    container_name: dogma-vpn
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    environment:
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-admin}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-admin12345A!}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-720}
+      ENABLE_BROWSER_DISCOVERY: "false"
+      DOMAIN_JSON_EXPORT_TOKEN: ${DOMAIN_JSON_EXPORT_TOKEN:-replace-with-random-export-token}
+      DOMAIN_JSON_EXPORT_PATH: /app/exports/domains-export.json
+      RULESET_OUTPUT_PATH: /var/www/files/data.json
+      RULESET_ARCHIVE_DIR: /var/www/files
+    volumes:
+      - ./data/app:/app/data
+      - ./data/files:/var/www/files
+      - ./exports:/app/exports
