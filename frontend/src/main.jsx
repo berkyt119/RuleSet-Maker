@@ -91,6 +91,7 @@ function Metric({ label, value }) {
 function DomainsPage() {
   const [catalog, setCatalog] = useState(null)
   const [enabled, setEnabled] = useState(new Set())
+  const [expandedServices, setExpandedServices] = useState(new Set())
   const [dirty, setDirty] = useState(false)
   const [ruleset, setRuleset] = useState(null)
   const [message, setMessage] = useState('')
@@ -140,6 +141,12 @@ function DomainsPage() {
     for (const service of group.services) value ? next.add(service.key) : next.delete(service.key)
     setEnabled(next)
     setDirty(true)
+  }
+
+  function toggleExpanded(key) {
+    const next = new Set(expandedServices)
+    next.has(key) ? next.delete(key) : next.add(key)
+    setExpandedServices(next)
   }
 
   async function save() {
@@ -221,11 +228,18 @@ function DomainsPage() {
       const groupPartial = serviceKeys.some(key => enabled.has(key)) && !groupEnabled
       return <section className="domain-group" key={group.key}>
         <div className="group-head"><div className="group-icon">{initials(group.name)}</div><div><h3>{group.name}</h3><p>{group.services.length} сервисов</p></div><Toggle checked={groupEnabled} partial={groupPartial} onChange={value => toggleGroup(group, value)} /></div>
-        <div className="service-grid">{group.services.map(service => <article className="service-card" key={service.key}>
-          <div className="service-top"><div className="service-icon">{initials(service.display_name)}</div><div className="service-text"><b title={service.display_name}>{service.display_name}</b><span title={service.root_domain || 'Пользовательские значения'}>{service.root_domain || 'Пользовательские значения'}</span></div><Toggle checked={enabled.has(service.key)} onChange={value => toggleService(service.key, value)} /></div>
-          <p>{service.domains_count} доменов</p>
-          {service.is_custom && <div className="custom-tools"><form onSubmit={event => addDomain(event, service.custom_service_id)}><select value={valueTypes[service.custom_service_id] || 'domain'} onChange={e => setValueTypes({ ...valueTypes, [service.custom_service_id]: e.target.value })}><option value="domain">Домен</option><option value="ip_cidr">IP CIDR</option></select><input placeholder={(valueTypes[service.custom_service_id] || 'domain') === 'ip_cidr' ? '8.8.8.8/32' : 'example.com'} value={domainForms[service.custom_service_id] || ''} onChange={e => setDomainForms({ ...domainForms, [service.custom_service_id]: e.target.value })} /><button>Добавить</button></form><button className="danger" onClick={() => deleteService(service.custom_service_id)}>Удалить сервис</button>{service.custom_domains?.map(item => <div className="domain-row" key={`domain-${item.id}`}><span title={item.domain}>{item.domain}</span><button className="link-button" onClick={() => deleteDomain(service.custom_service_id, item.id)}>Удалить</button></div>)}{service.custom_cidrs?.map(item => <div className="domain-row" key={`cidr-${item.id}`}><span title={item.cidr}>{item.cidr}</span><button className="link-button" onClick={() => deleteCidr(service.custom_service_id, item.id)}>Удалить</button></div>)}</div>}
-        </article>)}</div>
+        <div className="service-grid">{group.services.map(service => {
+          const customDomains = service.custom_domains || []
+          const customCidrs = service.custom_cidrs || []
+          const isExpanded = expandedServices.has(service.key)
+          const domainCount = service.is_custom ? customDomains.length + (service.root_domain ? 1 : 0) : service.domains_count
+          const cidrCount = service.is_custom ? customCidrs.length : 0
+          return <article className="service-card" key={service.key}>
+            <div className="service-top"><div className="service-icon">{initials(service.display_name)}</div><div className="service-text"><b title={service.display_name}>{service.display_name}</b><span title={service.root_domain || 'Пользовательские значения'}>{service.root_domain || 'Пользовательские значения'}</span></div><Toggle checked={enabled.has(service.key)} onChange={value => toggleService(service.key, value)} /></div>
+            <div className="service-summary"><span>Домены: {domainCount}</span><span>CIDR: {cidrCount}</span></div>
+            {service.is_custom && <div className="custom-tools"><form onSubmit={event => addDomain(event, service.custom_service_id)}><select value={valueTypes[service.custom_service_id] || 'domain'} onChange={e => setValueTypes({ ...valueTypes, [service.custom_service_id]: e.target.value })}><option value="domain">Домен</option><option value="ip_cidr">IP CIDR</option></select><input placeholder={(valueTypes[service.custom_service_id] || 'domain') === 'ip_cidr' ? '8.8.8.8/32' : 'example.com'} value={domainForms[service.custom_service_id] || ''} onChange={e => setDomainForms({ ...domainForms, [service.custom_service_id]: e.target.value })} /><button>Добавить</button></form><div className="custom-actions"><button className="secondary list-toggle" onClick={() => toggleExpanded(service.key)} type="button">{isExpanded ? 'Скрыть список' : 'Показать список'}</button><button className="danger" onClick={() => deleteService(service.custom_service_id)} type="button">Удалить сервис</button></div>{isExpanded && <div className="custom-list">{service.root_domain && <div className="domain-row"><span>{service.root_domain}</span><em>Основной домен</em></div>}{customDomains.map(item => <div className="domain-row" key={`domain-${item.id}`}><span>{item.domain}</span><button className="link-button" onClick={() => deleteDomain(service.custom_service_id, item.id)}>Удалить</button></div>)}{customCidrs.map(item => <div className="domain-row" key={`cidr-${item.id}`}><span>{item.cidr}</span><button className="link-button" onClick={() => deleteCidr(service.custom_service_id, item.id)}>Удалить</button></div>)}{!service.root_domain && customDomains.length === 0 && customCidrs.length === 0 && <div className="empty-list">Список пуст</div>}</div>}</div>}
+          </article>
+        })}</div>
       </section>
     })}</div>
   </Panel>

@@ -315,6 +315,21 @@ th { color: #475569; font-size: 13px; background: #f8fafc; }
   white-space: nowrap;
 }
 .service-top span { display: block; color: #64748b; font-size: 13px; margin-top: 2px; }
+.service-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.service-summary span {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 13px;
+  font-weight: 600;
+}
 .toggle {
   width: 52px;
   height: 30px;
@@ -346,19 +361,39 @@ th { color: #475569; font-size: 13px; background: #f8fafc; }
 .custom-tools { display: grid; gap: 8px; margin-top: 10px; }
 .custom-tools form { display: grid; grid-template-columns: 118px minmax(0, 1fr) 104px; gap: 8px; }
 .custom-tools button { width: 100%; text-align: center; }
+.custom-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.list-toggle { min-height: 40px; }
+.custom-list {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  overflow: hidden;
+}
 .danger { background: #fff; color: #be123c; border-color: #fecdd3; }
 .danger:hover { background: #fff1f2; }
 .domain-row {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 10px;
-  padding: 6px 0;
+  padding: 9px 10px;
   border-top: 1px solid #eef2f7;
 }
+.domain-row:first-child { border-top: 0; }
 .domain-row span {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 1.35;
+}
+.domain-row em {
+  color: #64748b;
+  font-size: 12px;
+  font-style: normal;
   white-space: nowrap;
 }
 .link-button {
@@ -368,6 +403,10 @@ th { color: #475569; font-size: 13px; background: #f8fafc; }
   padding: 0;
 }
 .link-button:hover { background: transparent; text-decoration: underline; }
+.empty-list {
+  color: #64748b;
+  padding: 10px;
+}
 
 @media (max-width: 1180px) {
   .toolbar { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
@@ -380,6 +419,6 @@ th { color: #475569; font-size: 13px; background: #f8fafc; }
   aside { position: static; width: auto; height: auto; min-height: auto; }
   .sidebar-bottom { position: static; }
   main { margin-left: 0; padding: 18px; }
-  .toolbar, .search-form, .inline-form, .custom-create, .custom-tools form { grid-template-columns: 1fr; }
+  .toolbar, .search-form, .inline-form, .custom-create, .custom-tools form, .custom-actions { grid-template-columns: 1fr; }
   .toolbar { align-items: stretch; }
 }
