@@ -216,15 +216,15 @@ function DomainsPage() {
       <div><b>Сервисов:</b> {enabled.size}</div>
       <div><b>Доменов:</b> {selectedDomainsCount}</div>
       <div><b>CIDR:</b> {selectedCidrsCount}</div>
-      <button onClick={save} disabled={!dirty}>Сохранить</button>
+      <button onClick={save} disabled={!dirty}>Сохранить изменения</button>
       <a className="button secondary" href={`${API_BASE}/domains/ruleset/download`} onClick={downloadWithAuth}>Скачать JSON</a>
     </div>
     {catalog.error && <div className="error">{catalog.error}</div>}
     {error && <div className="error">{error}</div>}
     {message && <div className="success">{message}</div>}
     <form onSubmit={createCustomService} className="inline-form custom-create">
-      <input placeholder="Название сервиса" value={customForm.name} onChange={e => setCustomForm({ ...customForm, name: e.target.value })} />
-      <input placeholder="Основной домен, необязательно" value={customForm.root_domain} onChange={e => setCustomForm({ ...customForm, root_domain: e.target.value })} />
+      <label>Название сервиса<input placeholder="Например, video services" value={customForm.name} onChange={e => setCustomForm({ ...customForm, name: e.target.value })} /></label>
+      <label>Основной домен<input placeholder="Необязательно" value={customForm.root_domain} onChange={e => setCustomForm({ ...customForm, root_domain: e.target.value })} /></label>
       <button>Создать сервис</button>
     </form>
     <div className="groups-list">{catalog.groups.map(group => {
@@ -240,7 +240,7 @@ function DomainsPage() {
           return <article className={`service-card ${service.is_custom ? 'custom-service-card' : ''}`} key={service.key}>
             <div className="service-top"><div className="service-icon">{initials(service.display_name)}</div><div className="service-text"><b title={service.display_name}>{service.display_name}</b><span title={service.root_domain || 'Пользовательские значения'}>{service.root_domain || 'Пользовательские значения'}</span></div><Toggle checked={enabled.has(service.key)} onChange={value => toggleService(service.key, value)} /></div>
             {service.is_custom ? <div className="service-summary"><span>Домены: {customDomains.length + (service.root_domain ? 1 : 0)}</span><span>CIDR: {customCidrs.length}</span></div> : <p>{service.domains_count} доменов</p>}
-            {service.is_custom && <div className="custom-tools"><form onSubmit={event => addDomain(event, service.custom_service_id)}><select value={valueTypes[service.custom_service_id] || 'domain'} onChange={e => setValueTypes({ ...valueTypes, [service.custom_service_id]: e.target.value })}><option value="domain">Домен</option><option value="ip_cidr">IP CIDR</option></select><input placeholder={(valueTypes[service.custom_service_id] || 'domain') === 'ip_cidr' ? '8.8.8.8/32' : 'example.com'} value={domainForms[service.custom_service_id] || ''} onChange={e => setDomainForms({ ...domainForms, [service.custom_service_id]: e.target.value })} /><button>Добавить</button></form><div className="custom-actions"><button className="secondary list-toggle" type="button" onClick={() => toggleCustomList(service.key)}>{isCustomExpanded ? 'Скрыть список' : 'Показать список'}</button><button className="danger" type="button" onClick={() => deleteService(service.custom_service_id)}>Удалить сервис</button></div>{isCustomExpanded && <div className="custom-list"><div className="custom-list-section"><h4>Домены</h4>{service.root_domain && <div className="domain-row"><span>{service.root_domain}</span><em>Основной</em></div>}{customDomains.map(item => <div className="domain-row" key={`domain-${item.id}`}><span>{item.domain}</span><button className="link-button" onClick={() => deleteDomain(service.custom_service_id, item.id)}>Удалить</button></div>)}{!service.root_domain && customDomains.length === 0 && <div className="empty-list">Доменов нет</div>}</div><div className="custom-list-section"><h4>CIDR</h4>{customCidrs.map(item => <div className="domain-row" key={`cidr-${item.id}`}><span>{item.cidr}</span><button className="link-button" onClick={() => deleteCidr(service.custom_service_id, item.id)}>Удалить</button></div>)}{customCidrs.length === 0 && <div className="empty-list">CIDR нет</div>}</div></div>}</div>}
+            {service.is_custom && <div className="custom-tools"><form onSubmit={event => addDomain(event, service.custom_service_id)}><label>Тип значения<select value={valueTypes[service.custom_service_id] || 'domain'} onChange={e => setValueTypes({ ...valueTypes, [service.custom_service_id]: e.target.value })}><option value="domain">Домен</option><option value="ip_cidr">IP CIDR</option></select></label><label>Домен или IP CIDR<input placeholder={(valueTypes[service.custom_service_id] || 'domain') === 'ip_cidr' ? '8.8.8.8/32' : 'example.com'} value={domainForms[service.custom_service_id] || ''} onChange={e => setDomainForms({ ...domainForms, [service.custom_service_id]: e.target.value })} /></label><button>Добавить</button></form><div className="custom-actions"><button className="secondary list-toggle" type="button" onClick={() => toggleCustomList(service.key)}>{isCustomExpanded ? 'Скрыть список' : 'Показать список'}</button><button className="danger" type="button" onClick={() => deleteService(service.custom_service_id)}>Удалить сервис</button></div>{isCustomExpanded && <div className="custom-list"><div className="custom-list-section"><h4>Домены</h4>{service.root_domain && <div className="domain-row"><span>{service.root_domain}</span><em>Основной</em></div>}{customDomains.map(item => <div className="domain-row" key={`domain-${item.id}`}><span>{item.domain}</span><button className="link-button" onClick={() => deleteDomain(service.custom_service_id, item.id)}>Удалить</button></div>)}{!service.root_domain && customDomains.length === 0 && <div className="empty-list">Доменов нет</div>}</div><div className="custom-list-section"><h4>CIDR</h4>{customCidrs.map(item => <div className="domain-row" key={`cidr-${item.id}`}><span>{item.cidr}</span><button className="link-button" onClick={() => deleteCidr(service.custom_service_id, item.id)}>Удалить</button></div>)}{customCidrs.length === 0 && <div className="empty-list">CIDR нет</div>}</div></div>}</div>}
           </article>
         })}</div>
       </section>
@@ -277,9 +277,9 @@ function AdminUsers() {
   }
   return <Panel title="Пользователи">
     <form onSubmit={create} className="inline-form">
-      <input placeholder="login" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} />
-      <input placeholder="password" type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
-      <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}><option value="user">user</option><option value="admin">admin</option></select>
+      <label>Логин<input placeholder="login" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} /></label>
+      <label>Пароль<input placeholder="password" type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></label>
+      <label>Роль<select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}><option value="user">user</option><option value="admin">admin</option></select></label>
       <button>Создать</button>
     </form>
     {error && <div className="error">{error}</div>}
