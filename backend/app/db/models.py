@@ -85,6 +85,16 @@ class UserDomainSelection(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class GlobalDomainSelection(Base):
+    __tablename__ = "global_domain_selections"
+    __table_args__ = (UniqueConstraint("service_key", name="uq_global_service_selection"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    service_key: Mapped[str] = mapped_column(String(512), index=True)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class UserCustomService(Base):
     __tablename__ = "user_custom_services"
 
@@ -126,6 +136,19 @@ class UserRuleset(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    domains_json: Mapped[str] = mapped_column(Text, default="[]")
+    cidrs_json: Mapped[str] = mapped_column(Text, default="[]")
+    domains_count: Mapped[int] = mapped_column(Integer, default=0)
+    cidrs_count: Mapped[int] = mapped_column(Integer, default=0)
+    public_token: Mapped[str] = mapped_column(String(96), index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class GlobalRuleset(Base):
+    __tablename__ = "global_rulesets"
+    __table_args__ = (UniqueConstraint("public_token", name="uq_global_ruleset_public_token"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
     domains_json: Mapped[str] = mapped_column(Text, default="[]")
     cidrs_json: Mapped[str] = mapped_column(Text, default="[]")
     domains_count: Mapped[int] = mapped_column(Integer, default=0)

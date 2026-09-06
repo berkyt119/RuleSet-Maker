@@ -300,6 +300,7 @@ th { color: #475569; font-size: 13px; background: #f8fafc; }
   background: #fff;
   min-width: 0;
 }
+.custom-service-card { grid-column: 1 / -1; }
 .service-top {
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr) 58px;
@@ -360,10 +361,13 @@ th { color: #475569; font-size: 13px; background: #f8fafc; }
 .custom-tools { display: grid; gap: 8px; margin-top: 10px; }
 .custom-tools form { display: grid; grid-template-columns: 118px minmax(0, 1fr) 104px; gap: 8px; }
 .custom-tools button { width: 100%; text-align: center; }
+.custom-service-card .custom-tools { gap: 10px; }
+.custom-service-card .custom-tools form { grid-template-columns: 160px minmax(260px, 1fr) 130px; }
 .custom-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .list-toggle { margin: 0; }
 .custom-list {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   padding: 10px;
   background: #f8fafc;
@@ -385,16 +389,17 @@ th { color: #475569; font-size: 13px; background: #f8fafc; }
 .danger { background: #fff; color: #be123c; border-color: #fecdd3; }
 .danger:hover { background: #fff1f2; }
 .domain-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  align-items: start;
+  gap: 12px;
   padding: 6px 0;
   border-top: 1px solid #eef2f7;
 }
 .domain-row span {
   min-width: 0;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 .domain-row em {
   color: #64748b;
@@ -406,6 +411,11 @@ th { color: #475569; font-size: 13px; background: #f8fafc; }
   color: #1d4ed8;
   border: 0;
   padding: 0;
+}
+.custom-tools .link-button {
+  width: auto;
+  justify-self: end;
+  text-align: right;
 }
 .link-button:hover { background: transparent; text-decoration: underline; }
 
@@ -420,6 +430,6 @@ th { color: #475569; font-size: 13px; background: #f8fafc; }
   aside { position: static; width: auto; height: auto; min-height: auto; }
   .sidebar-bottom { position: static; }
   main { margin-left: 0; padding: 18px; }
-  .toolbar, .search-form, .inline-form, .custom-create, .custom-tools form, .custom-actions { grid-template-columns: 1fr; }
+  .toolbar, .search-form, .inline-form, .custom-create, .custom-tools form, .custom-actions, .custom-list { grid-template-columns: 1fr; }
   .toolbar { align-items: stretch; }
 }

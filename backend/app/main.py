@@ -10,7 +10,7 @@ from app.api import admin, auth, dashboard, domain, domain_json_export, domains_
 from app.core.config import get_settings
 from app.core.errors import http_exception_handler, unhandled_exception_handler, validation_exception_handler
 from app.core.security import hash_password
-from app.db.models import PasswordPolicy, User, UserCustomCidr, UserCustomDomain, UserCustomService
+from app.db.models import GlobalDomainSelection, GlobalRuleset, PasswordPolicy, User, UserCustomCidr, UserCustomDomain, UserCustomService, UserDomainSelection, UserRuleset
 from app.db.session import Base, SessionLocal, engine
 
 
@@ -51,6 +51,25 @@ def bootstrap() -> None:
                 db.commit()
             except Exception:
                 db.rollback()
+        if not db.query(GlobalDomainSelection).first():
+            migrated = {}
+            for row in db.query(UserDomainSelection).order_by(UserDomainSelection.updated_at).all():
+                migrated[row.service_key] = row
+            for row in migrated.values():
+                db.add(GlobalDomainSelection(service_key=row.service_key, is_enabled=row.is_enabled, updated_at=row.updated_at))
+        if not db.query(GlobalRuleset).first():
+            ruleset = db.query(UserRuleset).order_by(UserRuleset.updated_at.desc()).first()
+            if ruleset:
+                db.add(
+                    GlobalRuleset(
+                        domains_json=ruleset.domains_json,
+                        cidrs_json=ruleset.cidrs_json,
+                        domains_count=ruleset.domains_count,
+                        cidrs_count=ruleset.cidrs_count,
+                        public_token=ruleset.public_token,
+                        updated_at=ruleset.updated_at,
+                    )
+                )
         service_ids = {row.id for row in db.query(UserCustomService.id).all()}
         if service_ids:
             db.query(UserCustomCidr).filter(UserCustomCidr.service_id.notin_(service_ids)).delete(synchronize_session=False)

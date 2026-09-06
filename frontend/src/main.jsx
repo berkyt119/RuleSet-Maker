@@ -170,6 +170,7 @@ function DomainsPage() {
       await api('/domains/custom-services', { method: 'POST', body: JSON.stringify({ name: customForm.name, root_domain: customForm.root_domain || null }) })
       setCustomForm({ name: '', root_domain: '' })
       await load()
+      setDirty(true)
     } catch (err) {
       setError(err.message)
     }
@@ -182,6 +183,7 @@ function DomainsPage() {
       await api(`/domains/custom-services/${serviceId}/domains`, { method: 'POST', body: JSON.stringify({ domain: domainForms[serviceId] || '', value_type: valueTypes[serviceId] || 'domain' }) })
       setDomainForms({ ...domainForms, [serviceId]: '' })
       await load()
+      setDirty(true)
     } catch (err) {
       setError(err.message)
     }
@@ -190,16 +192,19 @@ function DomainsPage() {
   async function deleteService(serviceId) {
     await api(`/domains/custom-services/${serviceId}`, { method: 'DELETE' })
     await load()
+    setDirty(true)
   }
 
   async function deleteDomain(serviceId, domainId) {
     await api(`/domains/custom-services/${serviceId}/domains/${domainId}`, { method: 'DELETE' })
     await load()
+    setDirty(true)
   }
 
   async function deleteCidr(serviceId, cidrId) {
     await api(`/domains/custom-services/${serviceId}/cidrs/${cidrId}`, { method: 'DELETE' })
     await load()
+    setDirty(true)
   }
 
   if (error && !catalog) return <Panel title="Домены"><div className="error">{error}</div></Panel>
@@ -232,7 +237,7 @@ function DomainsPage() {
           const customDomains = service.custom_domains || []
           const customCidrs = service.custom_cidrs || []
           const isCustomExpanded = expandedCustomServices.has(service.key)
-          return <article className="service-card" key={service.key}>
+          return <article className={`service-card ${service.is_custom ? 'custom-service-card' : ''}`} key={service.key}>
             <div className="service-top"><div className="service-icon">{initials(service.display_name)}</div><div className="service-text"><b title={service.display_name}>{service.display_name}</b><span title={service.root_domain || 'Пользовательские значения'}>{service.root_domain || 'Пользовательские значения'}</span></div><Toggle checked={enabled.has(service.key)} onChange={value => toggleService(service.key, value)} /></div>
             {service.is_custom ? <div className="service-summary"><span>Домены: {customDomains.length + (service.root_domain ? 1 : 0)}</span><span>CIDR: {customCidrs.length}</span></div> : <p>{service.domains_count} доменов</p>}
             {service.is_custom && <div className="custom-tools"><form onSubmit={event => addDomain(event, service.custom_service_id)}><select value={valueTypes[service.custom_service_id] || 'domain'} onChange={e => setValueTypes({ ...valueTypes, [service.custom_service_id]: e.target.value })}><option value="domain">Домен</option><option value="ip_cidr">IP CIDR</option></select><input placeholder={(valueTypes[service.custom_service_id] || 'domain') === 'ip_cidr' ? '8.8.8.8/32' : 'example.com'} value={domainForms[service.custom_service_id] || ''} onChange={e => setDomainForms({ ...domainForms, [service.custom_service_id]: e.target.value })} /><button>Добавить</button></form><div className="custom-actions"><button className="secondary list-toggle" type="button" onClick={() => toggleCustomList(service.key)}>{isCustomExpanded ? 'Скрыть список' : 'Показать список'}</button><button className="danger" type="button" onClick={() => deleteService(service.custom_service_id)}>Удалить сервис</button></div>{isCustomExpanded && <div className="custom-list"><div className="custom-list-section"><h4>Домены</h4>{service.root_domain && <div className="domain-row"><span>{service.root_domain}</span><em>Основной</em></div>}{customDomains.map(item => <div className="domain-row" key={`domain-${item.id}`}><span>{item.domain}</span><button className="link-button" onClick={() => deleteDomain(service.custom_service_id, item.id)}>Удалить</button></div>)}{!service.root_domain && customDomains.length === 0 && <div className="empty-list">Доменов нет</div>}</div><div className="custom-list-section"><h4>CIDR</h4>{customCidrs.map(item => <div className="domain-row" key={`cidr-${item.id}`}><span>{item.cidr}</span><button className="link-button" onClick={() => deleteCidr(service.custom_service_id, item.id)}>Удалить</button></div>)}{customCidrs.length === 0 && <div className="empty-list">CIDR нет</div>}</div></div>}</div>}

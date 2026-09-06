@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import active_user
-from app.db.models import User, UserCustomService, UserRuleset
+from app.db.models import GlobalRuleset, User, UserCustomService
 from app.db.session import get_db
 from app.services.domain_catalog import all_catalog_services, export_services, load_export_payload, selection_map
 
@@ -17,7 +17,7 @@ def dashboard(user: User = Depends(active_user), db: Session = Depends(get_db)):
     exported, generated_at, catalog_error = export_services()
     services, _generated_at, _error = all_catalog_services(db, user)
     selected = selection_map(db, user)
-    ruleset = db.query(UserRuleset).filter(UserRuleset.user_id == user.id).first()
+    ruleset = db.query(GlobalRuleset).first()
     domains = []
     cidrs = []
     if ruleset:
@@ -29,7 +29,7 @@ def dashboard(user: User = Depends(active_user), db: Session = Depends(get_db)):
             cidrs = json.loads(ruleset.cidrs_json or "[]")
         except Exception:
             cidrs = []
-    custom_count = db.query(UserCustomService).filter(UserCustomService.user_id == user.id).count()
+    custom_count = db.query(UserCustomService).count()
     return {
         "groups_count": len({service.group_key for service in services} | {"custom-user-services"}),
         "services_total": len(exported) + custom_count,

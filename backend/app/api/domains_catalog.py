@@ -63,7 +63,7 @@ def add_service(payload: CustomServiceIn, user: User = Depends(active_user), db:
 @router.delete("/custom-services/{service_id}", status_code=204)
 def delete_service(service_id: int, user: User = Depends(active_user), db: Session = Depends(get_db)):
     service = db.get(UserCustomService, service_id)
-    if not service or service.user_id != user.id:
+    if not service:
         raise AppError(404, "CUSTOM_SERVICE_NOT_FOUND", "Пользовательский сервис не найден.")
     audit(db, user, "delete_custom_service", "custom_service", service.id, service.name)
     db.query(UserCustomCidr).filter(UserCustomCidr.service_id == service.id).delete()
@@ -76,7 +76,7 @@ def delete_service(service_id: int, user: User = Depends(active_user), db: Sessi
 @router.post("/custom-services/{service_id}/domains")
 def add_domain(service_id: int, payload: CustomDomainIn, user: User = Depends(active_user), db: Session = Depends(get_db)):
     service = db.get(UserCustomService, service_id)
-    if not service or service.user_id != user.id:
+    if not service:
         raise AppError(404, "CUSTOM_SERVICE_NOT_FOUND", "Пользовательский сервис не найден.")
     try:
         if payload.value_type == "ip_cidr":
@@ -100,7 +100,7 @@ def add_domain(service_id: int, payload: CustomDomainIn, user: User = Depends(ac
 def delete_domain(service_id: int, domain_id: int, user: User = Depends(active_user), db: Session = Depends(get_db)):
     service = db.get(UserCustomService, service_id)
     domain = db.get(UserCustomDomain, domain_id)
-    if not service or service.user_id != user.id or not domain or domain.service_id != service.id:
+    if not service or not domain or domain.service_id != service.id:
         raise AppError(404, "CUSTOM_DOMAIN_NOT_FOUND", "Пользовательский домен не найден.")
     audit(db, user, "delete_custom_domain", "custom_domain", domain.id, domain.domain)
     db.delete(domain)
@@ -113,7 +113,7 @@ def delete_domain(service_id: int, domain_id: int, user: User = Depends(active_u
 def delete_cidr(service_id: int, cidr_id: int, user: User = Depends(active_user), db: Session = Depends(get_db)):
     service = db.get(UserCustomService, service_id)
     cidr = db.get(UserCustomCidr, cidr_id)
-    if not service or service.user_id != user.id or not cidr or cidr.service_id != service.id:
+    if not service or not cidr or cidr.service_id != service.id:
         raise AppError(404, "CUSTOM_CIDR_NOT_FOUND", "Пользовательский CIDR не найден.")
     audit(db, user, "delete_custom_cidr", "custom_cidr", cidr.id, cidr.cidr)
     db.delete(cidr)

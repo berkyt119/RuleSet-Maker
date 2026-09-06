@@ -9,7 +9,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.db.models import User, UserCustomCidr, UserCustomDomain, UserCustomService, UserDomainSelection, UserRuleset
+from app.db.models import GlobalDomainSelection, GlobalRuleset, User, UserCustomCidr, UserCustomDomain, UserCustomService
 from app.services.prefix_finder import DOMAIN_RE, normalize_hostname, validate_domain
 from app.services.ruleset_generator import build_ruleset
 
@@ -123,7 +123,7 @@ def export_services() -> tuple[list[CatalogService], str | None, str | None]:
 
 
 def user_custom_services(db: Session, user: User) -> list[CatalogService]:
-    rows = db.query(UserCustomService).filter(UserCustomService.user_id == user.id).order_by(UserCustomService.id).all()
+    rows = db.query(UserCustomService).order_by(UserCustomService.id).all()
     return [
         CatalogService(
             key=custom_service_key(row.id),
@@ -146,7 +146,7 @@ def all_catalog_services(db: Session, user: User) -> tuple[list[CatalogService],
 
 
 def selection_map(db: Session, user: User) -> dict[str, bool]:
-    rows = db.query(UserDomainSelection).filter(UserDomainSelection.user_id == user.id).all()
+    rows = db.query(GlobalDomainSelection).all()
     return {row.service_key: row.is_enabled for row in rows}
 
 
@@ -185,11 +185,11 @@ def catalog_response(db: Session, user: User) -> dict:
     return {"generated_at": generated_at, "error": error, "groups": list(groups.values())}
 
 
-def get_or_create_ruleset(db: Session, user: User) -> UserRuleset:
-    row = db.query(UserRuleset).filter(UserRuleset.user_id == user.id).first()
+def get_or_create_ruleset(db: Session, user: User | None = None) -> GlobalRuleset:
+    row = db.query(GlobalRuleset).first()
     if row:
         return row
-    row = UserRuleset(user_id=user.id, public_token=secrets.token_urlsafe(32))
+    row = GlobalRuleset(public_token=secrets.token_urlsafe(32))
     db.add(row)
     db.flush()
     return row
@@ -198,11 +198,11 @@ def get_or_create_ruleset(db: Session, user: User) -> UserRuleset:
 def save_selection_and_build_ruleset(db: Session, user: User, enabled_service_keys: list[str]) -> dict:
     enabled = set(enabled_service_keys)
     now = datetime.utcnow()
-    existing = {row.service_key: row for row in db.query(UserDomainSelection).filter(UserDomainSelection.user_id == user.id).all()}
+    existing = {row.service_key: row for row in db.query(GlobalDomainSelection).all()}
     for key in set(existing) | enabled:
         row = existing.get(key)
         if not row:
-            row = UserDomainSelection(user_id=user.id, service_key=key)
+            row = GlobalDomainSelection(service_key=key)
             db.add(row)
         row.is_enabled = key in enabled
         row.updated_at = now
@@ -229,7 +229,7 @@ def save_selection_and_build_ruleset(db: Session, user: User, enabled_service_ke
     return {"domains_count": ruleset.domains_count, "cidrs_count": ruleset.cidrs_count, "public_token": ruleset.public_token, "updated_at": ruleset.updated_at, "output_path": output_path, "archive_path": archive_path}
 
 
-def current_ruleset(db: Session, user: User) -> tuple[dict, UserRuleset]:
+def current_ruleset(db: Session, user: User) -> tuple[dict, GlobalRuleset]:
     ruleset = get_or_create_ruleset(db, user)
     try:
         domains = json.loads(ruleset.domains_json or "[]")
@@ -243,7 +243,7 @@ def current_ruleset(db: Session, user: User) -> tuple[dict, UserRuleset]:
 
 
 def public_ruleset(db: Session, token: str) -> dict | None:
-    row = db.query(UserRuleset).filter(UserRuleset.public_token == token).first()
+    row = db.query(GlobalRuleset).filter(GlobalRuleset.public_token == token).first()
     if not row:
         return None
     try:

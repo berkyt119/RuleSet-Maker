@@ -1,4 +1,9 @@
-from app.db.models import PasswordPolicy
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from app.db.models import GlobalDomainSelection, PasswordPolicy, User, UserCustomService
+from app.db.session import Base
+from app.services.domain_catalog import all_catalog_services, selection_map
 from app.services.password_policy import validate_password_policy
 from app.services.domain_catalog import validate_public_cidr
 from app.services.prefix_finder import normalize_discovery_result, validate_domain
@@ -64,3 +69,32 @@ def test_password_policy_validation():
     policy = PasswordPolicy(min_length=10, require_uppercase=True, require_lowercase=True, require_digit=True, require_special_char=True)
     assert validate_password_policy("Strong123!", policy) == []
     assert validate_password_policy("weak", policy)
+
+
+def test_custom_services_are_global_between_users():
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=engine)
+    db = sessionmaker(bind=engine)()
+    admin = User(username="admin", password_hash="x", role="admin", is_active=True)
+    user = User(username="user", password_hash="x", role="user", is_active=True)
+    db.add_all([admin, user])
+    db.flush()
+    db.add(UserCustomService(user_id=admin.id, name="Shared", display_name="Shared", root_domain="shared.example"))
+    db.commit()
+
+    services, _generated_at, _error = all_catalog_services(db, user)
+
+    assert any(service.display_name == "Shared" for service in services)
+
+
+def test_domain_selection_is_global_between_users():
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=engine)
+    db = sessionmaker(bind=engine)()
+    first = User(username="first", password_hash="x", role="user", is_active=True)
+    second = User(username="second", password_hash="x", role="user", is_active=True)
+    db.add_all([first, second, GlobalDomainSelection(service_key="service::one", is_enabled=True)])
+    db.commit()
+
+    assert selection_map(db, first) == {"service::one": True}
+    assert selection_map(db, second) == {"service::one": True}
