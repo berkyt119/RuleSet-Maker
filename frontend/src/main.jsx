@@ -35,7 +35,7 @@ function Login({ onLogin }) {
 }
 
 function AuthShell({ title, children }) {
-  return <main className="auth"><section><h1>{title}</h1><p>Сервис выбора доменов и ruleset для sing-box.</p>{children}</section></main>
+  return <main className="auth"><section className="auth-card"><div className="auth-brand"><img src="/dogma.png" alt="DOGMA" /><div><strong>DOGMA-VPN</strong><span>Private network</span></div></div><h1>{title}</h1><p>Сервис выбора доменов и ruleset для sing-box.</p>{children}</section></main>
 }
 
 function ChangePassword({ forced, onDone }) {
