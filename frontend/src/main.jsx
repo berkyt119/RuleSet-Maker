@@ -78,14 +78,16 @@ function Dashboard() {
       <Metric label="Включено сервисов" value={data.enabled_services_count} />
       <Metric label="Доменов в JSON" value={data.ruleset_domains_count} />
       <Metric label="CIDR в JSON" value={data.ruleset_cidrs_count} />
-      <Metric label="Каталог обновлен" value={formatDate(data.source_json_updated_at)} />
-      <Metric label="Ruleset обновлен" value={formatDate(data.ruleset_updated_at)} />
+    </div>
+    <div className="dashboard-meta">
+      <Metric label="Каталог обновлен" value={formatDate(data.source_json_updated_at)} compact />
+      <Metric label="Ruleset обновлен" value={formatDate(data.ruleset_updated_at)} compact />
     </div>
   </Panel>
 }
 
-function Metric({ label, value }) {
-  return <div className="metric"><span>{label}</span><b>{value ?? 'нет данных'}</b></div>
+function Metric({ label, value, compact = false }) {
+  return <div className={`metric ${compact ? 'metric-compact' : ''}`}><span>{label}</span><b>{value ?? 'нет данных'}</b></div>
 }
 
 function DomainsPage() {
