@@ -1,8 +1,10 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.api.admin import get_password_policy, update_password_policy
 from app.db.models import GlobalDomainSelection, PasswordPolicy, User, UserCustomService
 from app.db.session import Base
+from app.schemas import PasswordPolicyIn
 from app.services.domain_catalog import all_catalog_services, selection_map
 from app.services.password_policy import validate_password_policy
 from app.services.domain_catalog import validate_public_cidr
@@ -98,3 +100,32 @@ def test_domain_selection_is_global_between_users():
 
     assert selection_map(db, first) == {"service::one": True}
     assert selection_map(db, second) == {"service::one": True}
+
+
+def test_password_policy_update_is_persisted():
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=engine)
+    db = sessionmaker(bind=engine)()
+    admin = User(username="admin", password_hash="x", role="admin", is_active=True)
+    db.add(admin)
+    db.commit()
+    db.refresh(admin)
+
+    update_password_policy(
+        PasswordPolicyIn(
+            min_length=14,
+            require_uppercase=False,
+            require_lowercase=True,
+            require_digit=False,
+            require_special_char=True,
+        ),
+        admin,
+        db,
+    )
+    saved = get_password_policy(admin, db)
+
+    assert saved.min_length == 14
+    assert saved.require_uppercase is False
+    assert saved.require_lowercase is True
+    assert saved.require_digit is False
+    assert saved.require_special_char is True

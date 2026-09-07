@@ -291,14 +291,32 @@ function AdminUsers() {
 }
 
 function PasswordPolicyForm({ policy, setPolicy, message, setMessage }) {
+  const [error, setError] = useState('')
   async function save(event) {
     event.preventDefault()
-    await api('/admin/password-policy', { method: 'PUT', body: JSON.stringify(policy) })
-    setMessage('Сохранено')
+    setError('')
+    setMessage('')
+    try {
+      const savedPolicy = await api('/admin/password-policy', {
+        method: 'PUT',
+        body: JSON.stringify({
+          min_length: policy.min_length,
+          require_uppercase: policy.require_uppercase,
+          require_lowercase: policy.require_lowercase,
+          require_digit: policy.require_digit,
+          require_special_char: policy.require_special_char,
+        }),
+      })
+      setPolicy(savedPolicy)
+      setMessage('Сохранено')
+    } catch (err) {
+      setError(err.message)
+    }
   }
   return <form onSubmit={save} className="form narrow">
     <label>Минимальная длина<input type="number" value={policy.min_length} onChange={e => setPolicy({ ...policy, min_length: Number(e.target.value) })} /></label>
     {Object.entries(policyLabels).map(([key, label]) => <label className="check" key={key}><input type="checkbox" checked={policy[key]} onChange={e => setPolicy({ ...policy, [key]: e.target.checked })} />{label}</label>)}
+    {error && <div className="error">{error}</div>}
     <button>Сохранить</button>{message && <span>{message}</span>}
   </form>
 }

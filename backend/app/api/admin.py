@@ -17,6 +17,16 @@ from app.services.password_policy import validate_password_policy
 router = APIRouter(prefix="/admin", tags=["Administration"])
 
 
+def get_or_create_password_policy(db: Session) -> PasswordPolicy:
+    policy = db.query(PasswordPolicy).order_by(PasswordPolicy.id).first()
+    if policy:
+        return policy
+    policy = PasswordPolicy()
+    db.add(policy)
+    db.flush()
+    return policy
+
+
 def valid_role(role: str) -> str:
     if role not in {"admin", "user"}:
         raise AppError(400, "INVALID_ROLE", "Некорректная роль пользователя.")
@@ -31,7 +41,7 @@ def list_users(_admin: User = Depends(admin_user), db: Session = Depends(get_db)
 @router.post("/users", response_model=UserOut)
 def create_user(payload: UserCreate, admin: User = Depends(admin_user), db: Session = Depends(get_db)):
     role = valid_role(payload.role)
-    policy = db.query(PasswordPolicy).order_by(PasswordPolicy.id).first()
+    policy = get_or_create_password_policy(db)
     errors = validate_password_policy(payload.password, policy)
     if errors:
         raise AppError(400, "PASSWORD_POLICY_VIOLATION", " ".join(errors))
@@ -86,7 +96,7 @@ def set_user_password(user_id: int, payload: UserPasswordSet, admin: User = Depe
     user = db.get(User, user_id)
     if not user:
         raise AppError(404, "USER_NOT_FOUND", "Пользователь не найден.")
-    policy = db.query(PasswordPolicy).order_by(PasswordPolicy.id).first()
+    policy = get_or_create_password_policy(db)
     errors = validate_password_policy(payload.password, policy)
     if errors:
         raise AppError(400, "PASSWORD_POLICY_VIOLATION", " ".join(errors))
@@ -100,12 +110,15 @@ def set_user_password(user_id: int, payload: UserPasswordSet, admin: User = Depe
 
 @router.get("/password-policy", response_model=PasswordPolicyOut)
 def get_password_policy(_admin: User = Depends(admin_user), db: Session = Depends(get_db)):
-    return db.query(PasswordPolicy).order_by(PasswordPolicy.id).first()
+    policy = get_or_create_password_policy(db)
+    db.commit()
+    db.refresh(policy)
+    return policy
 
 
 @router.put("/password-policy", response_model=PasswordPolicyOut)
 def update_password_policy(payload: PasswordPolicyIn, admin: User = Depends(admin_user), db: Session = Depends(get_db)):
-    policy = db.query(PasswordPolicy).order_by(PasswordPolicy.id).first()
+    policy = get_or_create_password_policy(db)
     policy.min_length = payload.min_length
     policy.require_uppercase = payload.require_uppercase
     policy.require_lowercase = payload.require_lowercase
