@@ -1,13 +1,13 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import admin_user
 from app.core.errors import AppError
 from app.core.security import hash_password
-from app.db.models import PasswordPolicy, User
+from app.db.models import AuditLog, DomainScan, PasswordPolicy, User, UserCustomService, UserDomainSelection, UserRuleset
 from app.db.session import get_db
 from app.schemas import PasswordPolicyIn, PasswordPolicyOut, UserCreate, UserOut, UserPasswordSet, UserUpdate
 from app.services.audit import audit
@@ -31,6 +31,19 @@ def valid_role(role: str) -> str:
     if role not in {"admin", "user"}:
         raise AppError(400, "INVALID_ROLE", "Некорректная роль пользователя.")
     return role
+
+
+def active_admin_count(db: Session) -> int:
+    return db.query(User).filter(User.role == "admin", User.is_active.is_(True)).count()
+
+
+def ensure_admin_can_change_user(db: Session, target: User, admin: User, *, deleting: bool = False, next_role: str | None = None, next_active: bool | None = None) -> None:
+    action = "удалить" if deleting else "отключить"
+    if target.id == admin.id and (deleting or next_active is False):
+        raise AppError(400, "CANNOT_DISABLE_SELF", f"Нельзя {action} текущую учетную запись.")
+    will_stop_being_active_admin = target.role == "admin" and target.is_active and (deleting or next_active is False or next_role == "user")
+    if will_stop_being_active_admin and active_admin_count(db) <= 1:
+        raise AppError(400, "LAST_ACTIVE_ADMIN", "Нельзя удалить или отключить последнего активного администратора.")
 
 
 @router.get("/users", response_model=list[UserOut])
@@ -71,10 +84,12 @@ def update_user(user_id: int, payload: UserUpdate, admin: User = Depends(admin_u
     user = db.get(User, user_id)
     if not user:
         raise AppError(404, "USER_NOT_FOUND", "Пользователь не найден.")
+    next_role = valid_role(payload.role) if payload.role is not None else None
+    ensure_admin_can_change_user(db, user, admin, next_role=next_role, next_active=payload.is_active)
     if payload.username is not None:
         user.username = payload.username.strip()
-    if payload.role is not None:
-        user.role = valid_role(payload.role)
+    if next_role is not None:
+        user.role = next_role
     if payload.is_active is not None:
         user.is_active = payload.is_active
     if payload.must_change_password is not None:
@@ -89,6 +104,26 @@ def update_user(user_id: int, payload: UserUpdate, admin: User = Depends(admin_u
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.delete("/users/{user_id}", status_code=204)
+def delete_user(user_id: int, admin: User = Depends(admin_user), db: Session = Depends(get_db)):
+    user = db.get(User, user_id)
+    if not user:
+        raise AppError(404, "USER_NOT_FOUND", "Пользователь не найден.")
+    ensure_admin_can_change_user(db, user, admin, deleting=True)
+    audit(db, admin, "delete_user", "user", user.id, user.username)
+    db.flush()
+    db.query(AuditLog).filter(AuditLog.user_id == user.id).update({AuditLog.user_id: None}, synchronize_session=False)
+    db.query(PasswordPolicy).filter(PasswordPolicy.updated_by == user.id).update({PasswordPolicy.updated_by: None}, synchronize_session=False)
+    db.query(UserCustomService).filter(UserCustomService.user_id == user.id).update({UserCustomService.user_id: admin.id}, synchronize_session=False)
+    db.query(UserDomainSelection).filter(UserDomainSelection.user_id == user.id).delete(synchronize_session=False)
+    db.query(UserRuleset).filter(UserRuleset.user_id == user.id).delete(synchronize_session=False)
+    for scan in db.query(DomainScan).filter(DomainScan.user_id == user.id).all():
+        db.delete(scan)
+    db.delete(user)
+    db.commit()
+    return Response(status_code=204)
 
 
 @router.post("/users/{user_id}/password")

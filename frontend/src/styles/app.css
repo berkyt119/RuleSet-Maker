@@ -315,6 +315,16 @@ tbody tr:hover { background: var(--surface-soft); }
   width: 100%;
   overflow-x: auto;
 }
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.table-actions button {
+  min-height: 36px;
+  margin: 0;
+  padding: 8px 12px;
+}
 .policy-block {
   margin-top: 32px;
   padding-top: 24px;

@@ -1,10 +1,11 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.api.admin import get_password_policy, update_password_policy
+from app.api.admin import delete_user, get_password_policy, update_password_policy, update_user
+from app.core.errors import AppError
 from app.db.models import GlobalDomainSelection, PasswordPolicy, User, UserCustomService
 from app.db.session import Base
-from app.schemas import PasswordPolicyIn
+from app.schemas import PasswordPolicyIn, UserUpdate
 from app.services.domain_catalog import all_catalog_services, selection_map
 from app.services.password_policy import validate_password_policy
 from app.services.domain_catalog import validate_public_cidr
@@ -129,3 +130,69 @@ def test_password_policy_update_is_persisted():
     assert saved.require_lowercase is True
     assert saved.require_digit is False
     assert saved.require_special_char is True
+
+
+def test_admin_can_disable_user_account():
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=engine)
+    db = sessionmaker(bind=engine)()
+    admin = User(username="admin", password_hash="x", role="admin", is_active=True)
+    user = User(username="user", password_hash="x", role="user", is_active=True)
+    db.add_all([admin, user])
+    db.commit()
+    db.refresh(admin)
+    db.refresh(user)
+
+    updated = update_user(user.id, UserUpdate(is_active=False), admin, db)
+
+    assert updated.is_active is False
+
+
+def test_admin_can_delete_user_account():
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=engine)
+    db = sessionmaker(bind=engine)()
+    admin = User(username="admin", password_hash="x", role="admin", is_active=True)
+    user = User(username="user", password_hash="x", role="user", is_active=True)
+    db.add_all([admin, user])
+    db.commit()
+    db.refresh(admin)
+    user_id = user.id
+
+    delete_user(user_id, admin, db)
+
+    assert db.get(User, user_id) is None
+
+
+def test_admin_cannot_delete_self():
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=engine)
+    db = sessionmaker(bind=engine)()
+    admin = User(username="admin", password_hash="x", role="admin", is_active=True)
+    db.add(admin)
+    db.commit()
+    db.refresh(admin)
+
+    try:
+        delete_user(admin.id, admin, db)
+    except AppError as exc:
+        assert exc.detail["code"] == "CANNOT_DISABLE_SELF"
+        return
+    raise AssertionError("admin deleted own account")
+
+
+def test_admin_cannot_disable_self():
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=engine)
+    db = sessionmaker(bind=engine)()
+    admin = User(username="admin", password_hash="x", role="admin", is_active=True)
+    db.add(admin)
+    db.commit()
+    db.refresh(admin)
+
+    try:
+        update_user(admin.id, UserUpdate(is_active=False), admin, db)
+    except AppError as exc:
+        assert exc.detail["code"] == "CANNOT_DISABLE_SELF"
+        return
+    raise AssertionError("admin disabled own account")

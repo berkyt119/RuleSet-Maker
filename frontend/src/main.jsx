@@ -277,6 +277,25 @@ function AdminUsers() {
       setError(err.message)
     }
   }
+  async function toggleActive(user) {
+    setError('')
+    try {
+      await api(`/admin/users/${user.id}`, { method: 'PATCH', body: JSON.stringify({ is_active: !user.is_active }) })
+      await load()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+  async function deleteUser(user) {
+    if (!confirm(`Удалить учетную запись ${user.username}?`)) return
+    setError('')
+    try {
+      await api(`/admin/users/${user.id}`, { method: 'DELETE' })
+      await load()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
   return <Panel title="Пользователи">
     <form onSubmit={create} className="inline-form">
       <label>Логин<input placeholder="login" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} /></label>
@@ -285,7 +304,7 @@ function AdminUsers() {
       <button>Создать</button>
     </form>
     {error && <div className="error">{error}</div>}
-    <div className="table-wrap"><table><thead><tr><th>ID</th><th>Логин</th><th>Роль</th><th>Активен</th><th>Смена пароля</th></tr></thead><tbody>{users.map(user => <tr key={user.id}><td>{user.id}</td><td>{user.username}</td><td>{user.role}</td><td>{user.is_active ? 'да' : 'нет'}</td><td>{user.must_change_password ? 'да' : 'нет'}</td></tr>)}</tbody></table></div>
+    <div className="table-wrap"><table><thead><tr><th>ID</th><th>Логин</th><th>Роль</th><th>Активен</th><th>Смена пароля</th><th>Действия</th></tr></thead><tbody>{users.map(user => <tr key={user.id}><td>{user.id}</td><td>{user.username}</td><td>{user.role}</td><td>{user.is_active ? 'да' : 'нет'}</td><td>{user.must_change_password ? 'да' : 'нет'}</td><td><div className="table-actions"><button className="secondary" type="button" onClick={() => toggleActive(user)}>{user.is_active ? 'Отключить' : 'Включить'}</button><button className="danger" type="button" onClick={() => deleteUser(user)}>Удалить</button></div></td></tr>)}</tbody></table></div>
     {policy && <section className="policy-block"><h3>Парольная политика</h3><PasswordPolicyForm policy={policy} setPolicy={setPolicy} message={policyMessage} setMessage={setPolicyMessage} /></section>}
   </Panel>
 }
